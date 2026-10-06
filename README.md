@@ -19,6 +19,7 @@ O projeto também disponibiliza executáveis para Windows, permitindo utilizar a
 
 ## Fluxo da automação
 
+```text
 Planilhas de entrada
         │
         ▼
@@ -40,10 +41,11 @@ Resultados da campanha
         ▼
 Resultados Agendados.xlsx
 Resultados Efetivados.xlsx
-
+```
 
 ## Estrutura do projeto
 
+```text
 .
 ├── Arquivos/
 │   ├── compilar_executaveis.ps1
@@ -64,6 +66,7 @@ Resultados Efetivados.xlsx
 │
 ├── Gerar Envios.exe
 └── Gerar Relatorios.exe
+```
 
 As pastas `Entradas`, `Saídas` e `Logs` mantêm apenas seus marcadores no Git. Os arquivos locais dessas pastas são ignorados pelo `.gitignore`.
 
@@ -71,14 +74,20 @@ As pastas `Entradas`, `Saídas` e `Logs` mantêm apenas seus marcadores no Git. 
 
 Os arquivos devem ser colocados na pasta `Entradas/`, mantendo seus nomes e estrutura de colunas:
 
+```text
 Telefones de Associados Ativos e Inativos.xlsx
 Nomes Agendados.xlsx
 Nomes Efetivados.xlsx
 Resultados.xlsx
+```
 
 Modelos das planilhas estão disponíveis em:
 
+```text
 Modelos de Entrada/
+```
+
+> Não versione arquivos contendo dados pessoais reais. Os modelos publicados no repositório devem possuir somente dados fictícios ou devidamente anonimizados.
 
 ## Utilização
 
