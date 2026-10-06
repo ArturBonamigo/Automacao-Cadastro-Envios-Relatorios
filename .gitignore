@@ -1,0 +1,21 @@
+# Dados locais: preserve apenas os marcadores das pastas.
+/Entradas/*
+!/Entradas/.gitkeep
+/Saídas/*
+!/Saídas/.gitkeep
+/Logs/*
+!/Logs/.gitkeep
+
+# Builds podem conter cópias das planilhas com dados.
+/Arquivos/build/
+/Arquivos/.build-tmp/
+
+# Ambientes virtuais e cache do Python.
+.venv/
+.venv-build/
+venv/
+__pycache__/
+*.py[cod]
+
+# Arquivos temporários do Excel.
+~$*
