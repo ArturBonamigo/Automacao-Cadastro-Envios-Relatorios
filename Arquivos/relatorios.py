@@ -34,7 +34,7 @@ def _selecionar_numeros_recebidos(df_resultados, template):
         raise ValueError(f"Template não encontrado no relatório: {template!r}")
 
     numeros = campanha.loc[
-        campanha["Status"].eq("Recebido"), "Número do cliente"
+        campanha["Status"].isin(["Recebido", "Lido"]), "Número do cliente"
     ].astype("string")
 
     # O Excel pode devolver identificadores numéricos como 5549999999999.0.
