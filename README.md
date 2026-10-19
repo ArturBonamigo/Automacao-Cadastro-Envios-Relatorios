@@ -195,7 +195,7 @@ Telefones duplicados são removidos das listas finais.
 
 ## Relatórios
 
-O arquivo `Resultados.xlsx` é utilizado para identificar quais notificações foram efetivamente recebidas.
+O arquivo `Resultados.xlsx` é utilizado para identificar quais notificações foram enviadas.
 
 Um associado é marcado como:
 
@@ -203,7 +203,11 @@ Um associado é marcado como:
 Enviada
 ```
 
-quando pelo menos um de seus telefones válidos aparece com o status `Recebido` no resultado da campanha correspondente.
+quando pelo menos um de seus telefones válidos aparece com o status `Enviado`, `Recebido` ou `Lido` no resultado da campanha correspondente. `Enviado` conta como envio, mesmo sem confirmação de recebimento.
+
+O relatório conta nomes únicos, enquanto a plataforma conta notificações por telefone. Um nome com dois telefones aparece uma única vez no relatório.
+
+A coluna `telefones` reúne os números válidos encontrados na base para cada nome, com DDI e DDD, separados por `; ` e sem repetições. Inclui também telefones com falha ou sem notificação na campanha. Nomes sem correspondência única ou sem telefone válido ficam com essa coluna vazia.
 
 Caso contrário:
 

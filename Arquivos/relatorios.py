@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pandas as pd
+
 from normalizacao import normalizar_nomes
 from processamento import (
     processar_nomes_agendados,
@@ -21,10 +23,11 @@ COLUNAS_TELEFONES = [
 
 TEMPLATE_EFETIVADOS = "Termo de Efetivação de Encerramento"
 TEMPLATE_AGENDADOS = "Comunicado de Agendamento de Encerramento de Conta Corrente"
+STATUS_ENVIADOS = ("Enviado", "Recebido", "Lido")
 
 
-def _selecionar_numeros_recebidos(df_resultados, template):
-    """Seleciona números completos com status exatamente Recebido no template."""
+def _selecionar_numeros_enviados(df_resultados, template):
+    """Seleciona os envios do template, incluindo recebimentos e leituras."""
     campanha = df_resultados.loc[
         df_resultados["Desc. Template"].eq(template)
     ]
@@ -34,7 +37,7 @@ def _selecionar_numeros_recebidos(df_resultados, template):
         raise ValueError(f"Template não encontrado no relatório: {template!r}")
 
     numeros = campanha.loc[
-        campanha["Status"].isin(["Recebido", "Lido"]), "Número do cliente"
+        campanha["Status"].isin(STATUS_ENVIADOS), "Número do cliente"
     ].astype("string")
 
     # O Excel pode devolver identificadores numéricos como 5549999999999.0.
@@ -91,12 +94,12 @@ def _relacionar_nomes_telefones(df_base):
 
 
 def _gerar_relatorio(df_nomes, df_base, df_resultados, template):
-    """Um telefone recebido é suficiente para marcar o nome como Enviada."""
-    numeros_recebidos = _selecionar_numeros_recebidos(df_resultados, template)
+    """Um telefone enviado, recebido ou lido marca o nome como Enviada."""
+    numeros_enviados = _selecionar_numeros_enviados(df_resultados, template)
     relacao = _relacionar_nomes_telefones(df_base)
 
-    nomes_com_recebimento = relacao.loc[
-        relacao["numero_completo"].isin(numeros_recebidos),
+    nomes_com_envio = relacao.loc[
+        relacao["numero_completo"].isin(numeros_enviados),
         "nome_normalizado",
     ]
 
@@ -115,11 +118,18 @@ def _gerar_relatorio(df_nomes, df_base, df_resultados, template):
 
     relatorio["status_envio"] = "Não enviado"
     relatorio.loc[
-        relatorio["nome_normalizado"].isin(nomes_com_recebimento),
+        relatorio["nome_normalizado"].isin(nomes_com_envio),
         "status_envio",
     ] = "Enviada"
 
-    return relatorio[["nome", "status_envio"]].reset_index(drop=True)
+    telefones_por_nome = relacao.groupby("nome_normalizado", sort=False)[
+        "numero_completo"
+    ].agg("; ".join)
+    relatorio["telefones"] = (
+        relatorio["nome_normalizado"].map(telefones_por_nome).fillna("")
+    )
+
+    return relatorio[["nome", "status_envio", "telefones"]].reset_index(drop=True)
 
 
 def gerar_relatorio_efetivados(
@@ -137,14 +147,20 @@ def gerar_relatorio_agendados(
 
 
 def salvar_relatorio(df_relatorio, caminho):
-    """Exporta somente nome e status_envio; substitui o arquivo se já existir."""
+    """Exporta nome, status e telefones; substitui o arquivo se já existir."""
     caminho = Path(caminho)
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    df_relatorio.to_excel(
-        caminho,
-        columns=["nome", "status_envio"],
-        index=False,
-    )
+    colunas = ["nome", "status_envio", "telefones"]
+    with pd.ExcelWriter(caminho, engine="openpyxl") as writer:
+        df_relatorio.to_excel(writer, columns=colunas, index=False)
+        planilha = writer.sheets["Sheet1"]
+        for indice, coluna in enumerate(colunas, start=1):
+            largura = max(
+                len(coluna),
+                max((len(str(valor)) for valor in df_relatorio[coluna].dropna()), default=0),
+            ) + 2
+            letra = planilha.cell(row=1, column=indice).column_letter
+            planilha.column_dimensions[letra].width = largura
     return caminho
 
 
