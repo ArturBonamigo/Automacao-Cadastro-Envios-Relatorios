@@ -7,7 +7,7 @@ Automação Cadastro/
   Gerar Envios.exe
   Gerar Relatorios.exe
   Entradas/
-    Telefones de Associados Ativos e Inativos.xlsx
+    Telefones de Associados 3251.xlsx
     Nomes Agendados.xlsx
     Nomes Efetivados.xlsx
     Resultados.xlsx
@@ -17,6 +17,7 @@ Automação Cadastro/
     gerar_envios.py
     gerar_relatorios.py
     execucao.py
+    contatos.py
     processamento.py
     normalizacao.py
     cruzamentos.py
@@ -32,6 +33,14 @@ Automação Cadastro/
 1. Atualize as planilhas em `Entradas`, mantendo os nomes e as colunas atuais.
 2. Dê dois cliques em `Gerar Envios.exe` para gerar `Envio Agendados.xlsx` e `Envio Efetivados.xlsx` em `Saídas`. Esta etapa não precisa de `Resultados.xlsx`.
 3. Após obter os resultados das notificações, atualize `Entradas/Resultados.xlsx` e execute `Gerar Relatorios.exe`. Ele gera `Resultados Agendados.xlsx` e/ou `Resultados Efetivados.xlsx`, conforme os templates presentes na entrada.
+
+A base `Telefones de Associados 3251.xlsx` usa o cabeçalho na primeira linha: `Nome Cliente`, `Telefone Celular`, `Telefone Comercial`, `Telefone Fax`, `Telefone Residencial`, `Telefone Recado` e `Email`. Telefones com `-2` são considerados vazios; as demais regras de telefone permanecem iguais.
+
+O prefixo numérico cadastral é removido tanto na base quanto nas listas de nomes. Cadastros de mesmo nome são reunidos quando seus telefones válidos comprovam a ligação entre todos os registros. Todos os números válidos são aproveitados, sem repetir. Se algum cadastro ficar isolado, o grupo fica fora da lista automática e o gerador avisa na tela.
+
+Os relatórios possuem as colunas `nome`, `status_envio`, `telefones`, `e-mail` e `observacao`. Grupos de mesmo nome sem telefone em comum permanecem como `Não enviado`, com os números para conferência e a observação `números diversos para nomes iguais, mandar manualmente`.
+
+O e-mail é preenchido somente para `Não enviado`, quando o cadastro é único ou os registros de mesmo nome foram confirmados por telefone em comum. Endereços distintos desses registros confirmados são reunidos sem repetir. Campos vazios ou com `NÃO INFORMADO` ficam vazios. As regras de sucesso da campanha e de formato dos telefones continuam iguais.
 
 Os arquivos de saída com o mesmo nome são substituídos. Feche-os no Excel antes de executar. Quando um template está ausente nos resultados, o relatório daquele grupo não é atualizado; um arquivo antigo pode permanecer em `Saídas`, e o programa informa isso na tela.
 

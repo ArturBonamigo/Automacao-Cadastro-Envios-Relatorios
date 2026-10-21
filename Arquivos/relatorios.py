@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from normalizacao import normalizar_nomes
+from contatos import AVISO_MANUAL, COLUNAS_TELEFONES, preparar_base
 from processamento import (
     processar_nomes_agendados,
     processar_nomes_efetivados,
@@ -12,14 +13,6 @@ from processamento import (
     processar_resultados,
 )
 
-
-COLUNAS_TELEFONES = [
-    "Telefone Celular",
-    "Telefone Comercial",
-    "Telefone Fax",
-    "Telefone Recado",
-    "Telefone Residencial",
-]
 
 TEMPLATE_EFETIVADOS = "Termo de Efetivação de Encerramento"
 TEMPLATE_AGENDADOS = "Comunicado de Agendamento de Encerramento de Conta Corrente"
@@ -52,54 +45,20 @@ def _selecionar_numeros_enviados(df_resultados, template):
 
 
 def _relacionar_nomes_telefones(df_base):
-    """Mantém a associação nome/telefone apenas para nomes únicos na base."""
-    base = df_base[["nome", *COLUNAS_TELEFONES]].copy()
-    base["nome_normalizado"] = normalizar_nomes(base["nome"])
-
-    nome_preenchido = (
-        base["nome_normalizado"].notna()
-        & base["nome_normalizado"].ne("")
-    )
-    base = base.loc[nome_preenchido]
-
-    # keep=False exclui todas as ocorrências dos nomes ambíguos.
-    base_unica = base.loc[
-        ~base["nome_normalizado"].duplicated(keep=False)
+    """Relaciona os telefones dos cadastros liberados para envio."""
+    _, relacao = preparar_base(df_base)
+    return relacao.loc[
+        relacao["cadastro_liberado"], ["nome_normalizado", "numero_completo"]
     ]
-
-    relacao = base_unica.melt(
-        id_vars=["nome_normalizado"],
-        value_vars=COLUNAS_TELEFONES,
-        var_name="tipo_telefone",
-        value_name="telefone_original",
-    )
-
-    telefones_limpos = (
-        relacao["telefone_original"]
-        .astype("string")
-        .str.replace(r"[\s-]+", "", regex=True)
-    )
-    partes = telefones_limpos.str.extract(
-        r"^\(([0-9]{2})\)([0-9]{8,9})$"
-    )
-    partes.columns = ["DDD", "telefone"]
-
-    # A mesma regra de formato usada na preparação das listas de envio.
-    relacao["numero_completo"] = "55" + partes["DDD"] + partes["telefone"]
-    return (
-        relacao[["nome_normalizado", "numero_completo"]]
-        .dropna(subset=["numero_completo"])
-        .drop_duplicates()
-    )
 
 
 def _gerar_relatorio(df_nomes, df_base, df_resultados, template):
     """Um telefone enviado, recebido ou lido marca o nome como Enviada."""
     numeros_enviados = _selecionar_numeros_enviados(df_resultados, template)
-    relacao = _relacionar_nomes_telefones(df_base)
+    base, relacao = preparar_base(df_base)
 
     nomes_com_envio = relacao.loc[
-        relacao["numero_completo"].isin(numeros_enviados),
+        relacao["cadastro_liberado"] & relacao["numero_completo"].isin(numeros_enviados),
         "nome_normalizado",
     ]
 
@@ -129,7 +88,21 @@ def _gerar_relatorio(df_nomes, df_base, df_resultados, template):
         relatorio["nome_normalizado"].map(telefones_por_nome).fillna("")
     )
 
-    return relatorio[["nome", "status_envio", "telefones"]].reset_index(drop=True)
+    emails = base.loc[base["cadastro_liberado"], ["nome_normalizado", "email"]].copy()
+    emails = emails.dropna(subset=["email"]).drop_duplicates()
+    emails_por_nome = emails.groupby("nome_normalizado", sort=False)["email"].agg("; ".join)
+    relatorio["e-mail"] = (
+        relatorio["nome_normalizado"].map(emails_por_nome).fillna("")
+        .where(relatorio["status_envio"].eq("Não enviado"), "")
+    )
+
+    nomes_manuais = base.loc[~base["cadastro_liberado"], "nome_normalizado"]
+    relatorio["observacao"] = ""
+    relatorio.loc[
+        relatorio["nome_normalizado"].isin(nomes_manuais), "observacao"
+    ] = AVISO_MANUAL
+
+    return relatorio[["nome", "status_envio", "telefones", "e-mail", "observacao"]].reset_index(drop=True)
 
 
 def gerar_relatorio_efetivados(
@@ -147,10 +120,10 @@ def gerar_relatorio_agendados(
 
 
 def salvar_relatorio(df_relatorio, caminho):
-    """Exporta nome, status e telefones; substitui o arquivo se já existir."""
+    """Exporta contatos, status e observação; substitui o arquivo existente."""
     caminho = Path(caminho)
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    colunas = ["nome", "status_envio", "telefones"]
+    colunas = ["nome", "status_envio", "telefones", "e-mail", "observacao"]
     with pd.ExcelWriter(caminho, engine="openpyxl") as writer:
         df_relatorio.to_excel(writer, columns=colunas, index=False)
         planilha = writer.sheets["Sheet1"]

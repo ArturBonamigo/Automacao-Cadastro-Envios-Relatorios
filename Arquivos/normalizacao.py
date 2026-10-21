@@ -17,6 +17,8 @@ def normalizar_nomes(coluna):
 
     coluna = coluna.str.strip()
     coluna = coluna.str.replace(r"\s+", " ", regex=True)
+    # O mesmo prefixo cadastral deve ser removido na base e nas listas de nomes.
+    coluna = coluna.str.replace(r"^\d{1,3}(?:\.\d{3}){2}\s+", "", regex=True)
     coluna = coluna.str.upper()
     coluna = coluna.apply(remover_acentos)
 

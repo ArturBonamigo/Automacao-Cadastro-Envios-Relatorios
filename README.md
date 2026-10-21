@@ -49,6 +49,7 @@ Resultados Efetivados.xlsx
 .
 ├── Arquivos/
 │   ├── compilar_executaveis.ps1
+│   ├── contatos.py
 │   ├── cruzamentos.py
 │   ├── execucao.py
 │   ├── gerar_envios.py
@@ -75,7 +76,7 @@ As pastas `Entradas`, `Saídas` e `Logs` mantêm apenas seus marcadores no Git. 
 Os arquivos devem ser colocados na pasta `Entradas/`, mantendo seus nomes e estrutura de colunas:
 
 ```text
-Telefones de Associados Ativos e Inativos.xlsx
+Telefones de Associados 3251.xlsx
 Nomes Agendados.xlsx
 Nomes Efetivados.xlsx
 Resultados.xlsx
@@ -87,6 +88,8 @@ Modelos das planilhas estão disponíveis em:
 Modelos de Entrada/
 ```
 
+A base `Telefones de Associados 3251.xlsx` deve ter o cabeçalho na primeira linha, com as colunas `Nome Cliente`, `Telefone Celular`, `Telefone Comercial`, `Telefone Fax`, `Telefone Residencial`, `Telefone Recado` e `Email`. Não são mais ignoradas dez linhas iniciais.
+
 > Não versione arquivos contendo dados pessoais reais. Os modelos publicados no repositório devem possuir somente dados fictícios ou devidamente anonimizados.
 
 ## Utilização
@@ -96,7 +99,7 @@ Modelos de Entrada/
 Atualize na pasta `Entradas`:
 
 ```text
-Telefones de Associados Ativos e Inativos.xlsx
+Telefones de Associados 3251.xlsx
 Nomes Agendados.xlsx
 Nomes Efetivados.xlsx
 ```
@@ -148,6 +151,8 @@ Antes do cruzamento, os nomes são normalizados:
 ```text
 Remoção de espaços excedentes
         ↓
+Remoção do prefixo numérico cadastral na base e nas listas
+        ↓
 Conversão para maiúsculas
         ↓
 Remoção de acentos
@@ -163,14 +168,18 @@ Os registros podem receber os seguintes estados:
 
 | Status | Significado |
 |---|---|
-| `encontrado` | Nome único na base e com pelo menos um telefone |
+| `encontrado` | Nome único ou cadastros de mesmo nome ligados por telefone em comum |
 | `sem telefone` | Nome encontrado, mas sem telefone preenchido |
 | `não encontrado` | Nome não localizado na base |
-| `ambíguo` | Mais de um registro possui o mesmo nome normalizado |
+| `ambíguo` | Cadastros de mesmo nome sem ligação comprovada por telefone |
 
-Registros ambíguos não têm um associado escolhido automaticamente.
+Quando há cadastros de mesmo nome com telefone válido em comum, todos os números válidos desses cadastros são reunidos, sem repetições. A comparação ignora espaços e hífens, seguindo a mesma validação de telefone dos envios. Para três ou mais registros, todos precisam estar ligados por telefones compartilhados, inclusive por uma cadeia de registros; um cadastro isolado impede a liberação do grupo. Campos vazios, `-2` e telefones inválidos não comprovam essa ligação.
+
+Cadastros de mesmo nome sem essa ligação ficam fora das listas automáticas. Seus números válidos aparecem no relatório para revisão, com `status_envio` igual a `Não enviado` e `observacao` igual a `números diversos para nomes iguais, mandar manualmente`. O gerador de envios também informa a quantidade desses nomes na tela.
 
 ### Telefones
+
+O valor `-2`, numérico ou em texto, é tratado como telefone vazio na leitura da base. Os demais telefones seguem as mesmas regras de tratamento e validação.
 
 São aceitos telefones nos formatos:
 
@@ -207,13 +216,17 @@ quando pelo menos um de seus telefones válidos aparece com o status `Enviado`, 
 
 O relatório conta nomes únicos, enquanto a plataforma conta notificações por telefone. Um nome com dois telefones aparece uma única vez no relatório.
 
-A coluna `telefones` reúne os números válidos encontrados na base para cada nome, com DDI e DDD, separados por `; ` e sem repetições. Inclui também telefones com falha ou sem notificação na campanha. Nomes sem correspondência única ou sem telefone válido ficam com essa coluna vazia.
+A coluna `telefones` reúne os números válidos encontrados na base para cada nome, com DDI e DDD, separados por `; ` e sem repetições. Inclui também telefones com falha ou sem notificação na campanha e os números de cadastros que exigem revisão manual. Nomes não encontrados ou sem telefone válido ficam com essa coluna vazia.
 
 Caso contrário:
 
 ```text
 Não enviado
 ```
+
+Os relatórios possuem as colunas `nome`, `status_envio`, `telefones`, `e-mail` e `observacao`. O e-mail da base é preenchido apenas para associados com `status_envio` igual a `Não enviado`, inclusive quando não há telefone válido. Para `Enviada`, a coluna fica vazia.
+
+O e-mail é associado pelo mesmo nome normalizado quando o cadastro é único ou os registros repetidos foram confirmados pelo telefone em comum. Nesses registros confirmados, e-mails distintos são reunidos com `; `, sem repetir endereços. Nomes não encontrados ou ambíguos ficam sem e-mail. Campos vazios ou com `NÃO INFORMADO` também ficam vazios no relatório. O e-mail não interfere no status nem nas listas de envio.
 
 ## Logs e erros
 

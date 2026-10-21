@@ -2,9 +2,22 @@ import pandas as pd
 
 def processar_nomes_telefones_base():
     df = pd.read_excel(
-        r"Entradas\Telefones de Associados Ativos e Inativos.xlsx",
-        skiprows=10,
-        usecols=["Cliente", "Telefone Celular", "Telefone Comercial", "Telefone Fax", "Telefone Recado", "Telefone Residencial"]
+        r"Entradas\Telefones de Associados 3251.xlsx",
+        usecols=["Nome Cliente", "Telefone Celular", "Telefone Comercial", "Telefone Fax", "Telefone Recado", "Telefone Residencial", "Email"]
+    )
+    df = df.rename(columns={"Nome Cliente": "Cliente", "Email": "email"})
+
+    # A nova base usa -2 para indicar ausência de telefone.
+    colunas_telefones = [
+        "Telefone Celular", "Telefone Comercial", "Telefone Fax",
+        "Telefone Recado", "Telefone Residencial",
+    ]
+    df[colunas_telefones] = df[colunas_telefones].replace(
+        [-2, "-2"], pd.NA
+    )
+    df["email"] = df["email"].astype("string").str.strip()
+    df["email"] = df["email"].mask(
+        df["email"].str.upper().isin(["", "NÃO INFORMADO"]), pd.NA
     )
 
     df["nome"] = df["Cliente"].str.replace(
